@@ -16,7 +16,7 @@
                 <h1 class="text-2xl font-bold tracking-wider">PHASE COFFEE</h1>
                 <p class="text-xs text-stone-400">市集現場預點 & 候位系統</p>
             </div>
-            <!-- 切換檢視按鈕（模擬顧客端與店家端） -->
+            <!-- 切換檢視按鈕 -->
             <button id="toggle-view-btn" onclick="toggleView()" class="text-xs bg-stone-700 hover:bg-stone-600 px-3 py-1.5 rounded transition">
                 切換至店家後台
             </button>
@@ -58,7 +58,6 @@
                 <h2 class="text-lg font-bold mb-4 pb-2 border-b border-stone-100 text-stone-900">2. 現場預訂餐點</h2>
                 
                 <div class="space-y-4" id="menu-container">
-                    <!-- 菜單品項卡片 -->
                     <div class="flex justify-between items-center p-3 rounded-lg hover:bg-stone-50 border border-stone-100">
                         <div>
                             <div class="font-bold text-stone-800">單品手沖咖啡</div>
@@ -114,7 +113,6 @@
                 </div>
             </div>
 
-            <!-- 送出按鈕 -->
             <button id="submit-btn" onclick="submitOrder()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 flex justify-center items-center">
                 <span>確認送出預訂單</span>
             </button>
@@ -138,10 +136,8 @@
 
     <!-- JavaScript 邏輯 -->
     <script>
-        // 內建 App Script 後端 API 網址
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyEXPhlLXfyQpaxeB-1ADSdWemihBx6FNb6bYkwi-oE-JoA74lHQoAxvGOgS9cLSowA/exec";
 
-        // 品項資料庫
         const itemsData = {
             'item-1': { name: '單品手沖咖啡', price: 150, qty: 0 },
             'item-2': { name: '義式拿鐵 / 美式', price: 130, qty: 0 },
@@ -149,7 +145,6 @@
             'item-4': { name: '焦糖巴斯克蛋糕', price: 120, qty: 0 }
         };
 
-        // 更新數量與總金額
         function updateQty(itemId, delta) {
             const item = itemsData[itemId];
             if (!item) return;
@@ -161,7 +156,6 @@
             document.getElementById('total-price').innerText = `NT$ ${total}`;
         }
 
-        // 送出訂單
         async function submitOrder() {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
@@ -213,7 +207,6 @@
                     });
                 }
                 alert(`預訂成功！您的單號為：${orderId}\n請留意現場叫號！`);
-                // 重置表單
                 document.getElementById('cust-name').value = '';
                 document.getElementById('cust-phone').value = '';
                 Object.keys(itemsData).forEach(key => {
@@ -230,7 +223,6 @@
             }
         }
 
-        // 切換顧客端與店家後台
         function toggleView() {
             const custView = document.getElementById('customer-view');
             const adminView = document.getElementById('admin-view');
@@ -248,7 +240,6 @@
             }
         }
 
-        // 從 Apps Script 後端載入訂單
         async function fetchOrdersFromSheet() {
             const listContainer = document.getElementById('order-list');
             listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">更新訂單中...</div>';
@@ -263,16 +254,19 @@
                 const data = await res.json();
 
                 if (data.status === 'success' && data.orders.length > 0) {
-                    listContainer.innerHTML = data.orders.reverse().map(o => `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200">
+                    listContainer.innerHTML = data.orders.reverse().map((o, index) => `
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 mb-3" id="order-card-${index}">
                             <div class="flex justify-between items-center mb-2">
                                 <span class="font-bold text-lg text-stone-900">${o.id} - ${o.name} (${o.people}位)</span>
                                 <span class="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded">${o.time}</span>
                             </div>
-                            <div class="text-sm text-stone-600 mb-2">${o.items}</div>
-                            <div class="flex justify-between items-center text-sm font-bold border-t border-stone-100 pt-2">
-                                <span>電話: ${o.phone}</span>
-                                <span class="text-stone-900">NT$ ${o.total}</span>
+                            <div class="text-sm text-stone-600 mb-3">${o.items}</div>
+                            <div class="flex justify-between items-center text-sm font-bold border-t border-stone-100 pt-3">
+                                <span class="text-stone-700">電話: ${o.phone} | <span class="text-stone-900">NT$ ${o.total}</span></span>
+                                <div class="space-x-2">
+                                    <button onclick="updateOrderStatus(this, '叫號中')" class="text-xs bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded font-medium transition">📢 叫號</button>
+                                    <button onclick="updateOrderStatus(this, '已完成')" class="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded font-medium transition">✅ 完成</button>
+                                </div>
                             </div>
                         </div>
                     `).join('');
@@ -281,6 +275,19 @@
                 }
             } catch (err) {
                 listContainer.innerHTML = '<div class="text-center py-8 text-red-400">無法載入試算表資料</div>';
+            }
+        }
+
+        // 後台按鈕互動特效
+        function updateOrderStatus(btn, statusText) {
+            const card = btn.closest('div.bg-white');
+            const buttonsContainer = btn.parentElement;
+            if (statusText === '叫號中') {
+                card.style.borderColor = '#d97706'; // 琥珀色邊框
+                buttonsContainer.innerHTML = `<span class="text-xs bg-amber-500 text-white px-3 py-1 rounded font-bold">📢 已叫號</span>`;
+            } else {
+                card.style.opacity = '0.5';
+                buttonsContainer.innerHTML = `<span class="text-xs bg-emerald-600 text-white px-3 py-1 rounded font-bold">✅ 已完成</span>`;
             }
         }
     </script>
