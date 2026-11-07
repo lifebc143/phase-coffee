@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase Coffee 周邊市集 — 預點與候位系統</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans TC', sans-serif; }
+    .animate-fade-in { animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-amber-50/50 min-h-screen text-slate-800 pb-12">
+
+  <!-- 頂部導航與模式切換區 -->
+  <header class="bg-amber-900 text-amber-50 shadow-lg sticky top-0 z-50">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-mug-hot text-amber-400 text-xl"></i>
+        <span class="font-bold text-lg tracking-wide">Phase Coffee</span>
+        <span class="text-xs bg-amber-700 text-amber-200 px-2 py-0.5 rounded-full">市集實時系統</span>
+      </div>
+
+      <!-- 分頁切換按鈕 -->
+      <nav class="flex bg-amber-950/60 p-1 rounded-lg text-xs md:text-sm">
+        <button id="tab-customer" onclick="switchTab('customer')" class="px-3 py-1.5 rounded-md font-medium transition duration-200 bg-amber-600 text-white shadow">
+          <i class="fa-solid fa-mobile-screen-button mr-1"></i> 顧客手機端
+        </button>
+        <button id="tab-manager" onclick="switchTab('manager')" class="px-3 py-1.5 rounded-md font-medium transition duration-200 text-amber-200 hover:text-white">
+          <i class="fa-solid fa-store mr-1"></i> 店家後端 (<span id="queue-badge" class="font-bold text-amber-400">0</span>)
+        </button>
+        <button id="tab-guide" onclick="switchTab('guide')" class="px-3 py-1.5 rounded-md font-medium transition duration-200 text-amber-200 hover:text-white">
+          <i class="fa-solid fa-code mr-1"></i> GAS 串接教學
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 主要內容區域 -->
+  <main class="max-w-4xl mx-auto px-4 mt-6">
+
+    <!-- 全域 API 狀態提醒 -->
+    <div id="api-status-banner" class="hidden mb-4 p-3 rounded-xl text-xs flex justify-between items-center transition animate-fade-in"></div>
+
+    <!-- ==================== 1. 顧客手機端 ==================== -->
+    <div id="view-customer" class="space-y-6">
+      
+      <!-- Banner -->
+      <div class="bg-gradient-to-r from-amber-800 to-amber-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+        <div class="relative z-10">
+          <span class="inline-block bg-amber-700/80 text-amber-200 text-xs px-2.5 py-1 rounded-full font-medium mb-2">
+            📍 Phase Coffee Roasters 繼光市集專屬
+          </span>
+          <h1 class="text-2xl font-bold mb-1">免排隊！快速線上預點與候位</h1>
+          <p class="text-amber-200/90 text-sm">送出登記後即可輕鬆逛市集，系統將實時顯示叫號進度。</p>
+        </div>
+        <i class="fa-solid fa-store absolute -right-4 -bottom-6 text-9xl text-amber-700/20"></i>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        
+        <!-- 表單 -->
+        <div class="md:col-span-2 bg-white rounded-2xl shadow-md border border-amber-100 p-6">
+          <h2 class="text-base font-bold text-amber-950 mb-4 flex items-center border-b border-amber-100 pb-3">
+            <i class="fa-solid fa-pen-to-square text-amber-600 mr-2"></i> 填寫候位資訊與餐點
+          </h2>
+
+          <form id="orderForm" onsubmit="handleCustomerSubmit(event)" class="space-y-4">
+            
+            <!-- 顧客基本資料 -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">顧客姓名 / 暱稱 <span class="text-red-500">*</span></label>
+                <input type="text" id="cust-name" required placeholder="例如：陳小姐" class="w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1">聯絡電話 <span class="text-red-500">*</span></label>
+                <input type="tel" id="cust-phone" required placeholder="例如：0912345678" class="w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none">
+                <span id="phone-error" class="text-[11px] text-red-500 hidden mt-0.5 block">請輸入格式正確的台灣手機號碼</span>
+              </div>
+            </div>
+
+            <!-- 用餐人數 -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">用餐/入場人數 <span class="text-red-500">*</span></label>
+              <div class="grid grid-cols-4 gap-2">
+                <button type="button" onclick="selectPeople('1人', this)" class="btn-people py-2 text-sm border rounded-lg font-medium border-amber-600 bg-amber-50 text-amber-800">1 人</button>
+                <button type="button" onclick="selectPeople('2人', this)" class="btn-people py-2 text-sm border rounded-lg font-medium border-gray-200 text-gray-600">2 人</button>
+                <button type="button" onclick="selectPeople('3-4人', this)" class="btn-people py-2 text-sm border rounded-lg font-medium border-gray-200 text-gray-600">3-4 人</button>
+                <button type="button" onclick="selectPeople('5人以上', this)" class="btn-people py-2 text-sm border rounded-lg font-medium border-gray-200 text-gray-600">5+ 人</button>
+              </div>
+              <input type="hidden" id="cust-people" value="1人">
+            </div>
+
+            <!-- 品項選擇與數量控制器 -->
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label class="block text-xs font-semibold text-gray-700">預先選購品項與數量</label>
+                <span class="text-xs text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full">點選 + - 控制份數</span>
+              </div>
+              
+              <div id="menu-items-container" class="space-y-2.5">
+                <div class="menu-item-row flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white hover:border-amber-300 transition" data-price="150" data-name="☕ 市集手沖特調咖啡">
+                  <div class="flex-1 pr-2">
+                    <div class="text-sm font-semibold text-gray-800">☕ 市集手沖特調咖啡</div>
+                    <div class="text-xs text-gray-500">繼光街節慶限定淺焙風味</div>
+                    <div class="text-xs font-bold text-amber-800 mt-0.5">NT$ 150 / 份</div>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                    <button type="button" onclick="updateItemQty(this, -1)" class="w-7 h-7 flex items-center justify-center bg-white text-amber-900 border border-amber-300 rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-100 text-sm">-</button>
+                    <span class="item-qty font-bold text-amber-950 text-sm w-5 text-center">0</span>
+                    <button type="button" onclick="updateItemQty(this, 1)" class="w-7 h-7 flex items-center justify-center bg-amber-700 text-white rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-800 text-sm">+</button>
+                  </div>
+                </div>
+
+                <div class="menu-item-row flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white hover:border-amber-300 transition" data-price="130" data-name="🥛 經典拿鐵 / 美式">
+                  <div class="flex-1 pr-2">
+                    <div class="text-sm font-semibold text-gray-800">🥛 經典拿鐵 / 美式</div>
+                    <div class="text-xs text-gray-500">濃郁濃縮配方豆，可選冰/熱</div>
+                    <div class="text-xs font-bold text-amber-800 mt-0.5">NT$ 130 / 份</div>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                    <button type="button" onclick="updateItemQty(this, -1)" class="w-7 h-7 flex items-center justify-center bg-white text-amber-900 border border-amber-300 rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-100 text-sm">-</button>
+                    <span class="item-qty font-bold text-amber-950 text-sm w-5 text-center">0</span>
+                    <button type="button" onclick="updateItemQty(this, 1)" class="w-7 h-7 flex items-center justify-center bg-amber-700 text-white rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-800 text-sm">+</button>
+                  </div>
+                </div>
+
+                <div class="menu-item-row flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white hover:border-amber-300 transition" data-price="140" data-name="🧊 燕麥奶冷萃咖啡">
+                  <div class="flex-1 pr-2">
+                    <div class="text-sm font-semibold text-gray-800">🧊 燕麥奶冷萃咖啡</div>
+                    <div class="text-xs text-gray-500">順口絲滑高人氣冷萃系列</div>
+                    <div class="text-xs font-bold text-amber-800 mt-0.5">NT$ 140 / 份</div>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                    <button type="button" onclick="updateItemQty(this, -1)" class="w-7 h-7 flex items-center justify-center bg-white text-amber-900 border border-amber-300 rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-100 text-sm">-</button>
+                    <span class="item-qty font-bold text-amber-950 text-sm w-5 text-center">0</span>
+                    <button type="button" onclick="updateItemQty(this, 1)" class="w-7 h-7 flex items-center justify-center bg-amber-700 text-white rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-800 text-sm">+</button>
+                  </div>
+                </div>
+
+                <div class="menu-item-row flex items-center justify-between p-3 border border-amber-100 rounded-xl bg-white hover:border-amber-300 transition" data-price="120" data-name="🍰 市集限定焦糖巴斯克">
+                  <div class="flex-1 pr-2">
+                    <div class="text-sm font-semibold text-gray-800">🍰 市集限定焦糖巴斯克</div>
+                    <div class="text-xs text-gray-500">每日限量濃郁乳酪蛋糕</div>
+                    <div class="text-xs font-bold text-amber-800 mt-0.5">NT$ 120 / 份</div>
+                  </div>
+                  <div class="flex items-center space-x-2 bg-amber-50 p-1 rounded-lg border border-amber-200">
+                    <button type="button" onclick="updateItemQty(this, -1)" class="w-7 h-7 flex items-center justify-center bg-white text-amber-900 border border-amber-300 rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-100 text-sm">-</button>
+                    <span class="item-qty font-bold text-amber-950 text-sm w-5 text-center">0</span>
+                    <button type="button" onclick="updateItemQty(this, 1)" class="w-7 h-7 flex items-center justify-center bg-amber-700 text-white rounded-md shadow-sm active:scale-95 font-bold hover:bg-amber-800 text-sm">+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 即時總金額試算看板 -->
+            <div class="bg-amber-900/90 text-amber-50 p-3.5 rounded-xl flex justify-between items-center shadow-inner">
+              <div class="text-xs">
+                <span class="text-amber-200">點餐總份數：</span>
+                <span id="total-qty-display" class="font-bold text-white text-sm">0</span> 份
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-amber-200 mr-1">預計總金額：</span>
+                <span class="text-xl font-black text-amber-300">NT$ <span id="total-price-display">0</span></span>
+              </div>
+            </div>
+
+            <!-- 備註 -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">特殊需求 / 備註</label>
+              <textarea id="cust-note" rows="2" placeholder="例：去冰 / 奶素 / 攜帶寵物..." class="w-full p-2.5 text-sm rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"></textarea>
+            </div>
+
+            <!-- 提交按鈕 -->
+            <button type="submit" id="submit-btn" class="w-full bg-amber-700 hover:bg-amber-800 disabled:bg-gray-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition duration-200 flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span id="submit-btn-text">確認送出預點單</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 右側：當前叫號與個人訂單卡片 -->
+        <div class="space-y-4">
+          <!-- 現場當前看板 -->
+          <div class="bg-white rounded-2xl shadow-md border border-amber-100 p-5 text-center">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">目前現場叫號號碼</h3>
+            <div id="current-calling" class="text-4xl font-extrabold text-amber-700 my-2"># --</div>
+            <div class="text-xs text-gray-500">目前等待組數：<span id="waiting-groups-count" class="text-amber-700 font-bold">0 組</span></div>
+          </div>
+
+          <!-- 我的取單紀錄卡（未送出時隱藏） -->
+          <div id="my-ticket-card" class="hidden bg-amber-900 text-white rounded-2xl shadow-xl p-5 border border-amber-800 animate-fade-in">
+            <div class="flex justify-between items-start border-b border-amber-800 pb-3 mb-3">
+              <div>
+                <span class="text-xs text-amber-300">您的候位號碼</span>
+                <div id="ticket-number" class="text-3xl font-black text-amber-400"># A-01</div>
+              </div>
+              <span id="ticket-status-badge" class="bg-amber-700 text-amber-100 text-xs px-2.5 py-1 rounded-full font-medium">排隊準備中</span>
+            </div>
+            <div class="space-y-1.5 text-xs text-amber-100">
+              <p><i class="fa-regular fa-user text-amber-300 w-4"></i> <span id="ticket-name">--</span> (<span id="ticket-people">--</span>)</p>
+              <p><i class="fa-solid fa-coffee text-amber-300 w-4"></i> <span id="ticket-items">--</span></p>
+              <p><i class="fa-solid fa-coins text-amber-300 w-4"></i> 預計金額：<span id="ticket-total-price" class="text-amber-300 font-bold">NT$ 0</span></p>
+              <p><i class="fa-regular fa-clock text-amber-300 w-4"></i> <span id="ticket-time">--</span></p>
+            </div>
+            <p class="mt-4 text-[11px] text-amber-300/80 bg-amber-950/40 p-2 rounded text-center">
+              💡 請關注手機畫面，叫號至您的號碼時請至 Phase Coffee 櫃檯憑電話號碼取餐。
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ==================== 2. 店家管理後端 (Dashboard) ==================== -->
+    <div id="view-manager" class="hidden space-y-6">
+      
+      <!-- 控制頂欄 -->
+      <div class="bg-white rounded-2xl shadow-md border border-amber-100 p-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800 flex items-center">
+            <i class="fa-solid fa-list-check text-amber-600 mr-2"></i> 即時候位與訂單管理板
+          </h2>
+          <p class="text-xs text-gray-500">跨裝置即時同步，提供叫號與結單操作。</p>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button onclick="fetchOrdersFromGAS()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs rounded-lg font-medium transition shadow flex items-center">
+            <i class="fa-solid fa-rotate mr-1"></i> 手動同步
+          </button>
+          <button onclick="clearAllDataSafe()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs rounded-lg font-medium border border-red-200 transition">
+            <i class="fa-solid fa-trash-can mr-1"></i> 安全清空
+          </button>
+        </div>
+      </div>
+
+      <!-- 統計數據卡 -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-white p-4 rounded-xl border border-amber-100 shadow-sm text-center">
+          <div class="text-xs text-gray-500">等待處理單數</div>
+          <div id="stat-pending" class="text-2xl font-bold text-amber-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-amber-100 shadow-sm text-center">
+          <div class="text-xs text-gray-500">已叫號準備中</div>
+          <div id="stat-called" class="text-2xl font-bold text-blue-600 mt-1">0</div>
+        </div>
+        <div class="bg-white p-4 rounded-xl border border-amber-100 shadow-sm text-center">
+          <div class="text-xs text-gray-500">今日已完成</div>
+          <div id="stat-completed" class="text-2xl font-bold text-green-600 mt-1">0</div>
+        </div>
+      </div>
+
+      <!-- 訂單列表清單 -->
+      <div class="bg-white rounded-2xl shadow-md border border-amber-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 font-bold text-sm text-gray-700 flex justify-between items-center">
+          <span>即時訂單動態 (<span id="total-orders-count">0</span>)</span>
+          <span id="last-sync-time" class="text-xs text-gray-400 font-normal">尚未同步</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-amber-50/60 text-xs text-amber-900 font-semibold border-b border-amber-100">
+                <th class="py-3 px-4">號碼</th>
+                <th class="py-3 px-4">顧客姓名/電話</th>
+                <th class="py-3 px-4">人數</th>
+                <th class="py-3 px-4">點餐明細</th>
+                <th class="py-3 px-4">總金額</th>
+                <th class="py-3 px-4">狀態</th>
+                <th class="py-3 px-4 text-right">管理操作</th>
+              </tr>
+            </thead>
+            <tbody id="manager-order-rows" class="divide-y divide-gray-100 text-sm">
+              <!-- 動態生成訂單列 -->
+            </tbody>
+          </table>
+          <div id="empty-state" class="py-12 text-center text-gray-400 text-sm">
+            <i class="fa-solid fa-inbox text-4xl mb-2 text-amber-200"></i>
+            <p>目前尚無任何預點單數據</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- ==================== 3. Google 試算表串接教學 ==================== -->
+    <div id="view-guide" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-2xl shadow-md border border-amber-100 p-6">
+        <h2 class="text-lg font-bold text-amber-950 mb-2 flex items-center">
+          <i class="fa-solid fa-cloud-arrow-up text-amber-600 mr-2"></i> 完整 Google Apps Script 部署設定教學
+        </h2>
+        <p class="text-xs text-gray-600 mb-6">透過下列完整腳本，即可實現跨裝置 `doPost` 寫入與 `doGet` 讀取串接。</p>
+
+        <!-- 步驟列表 -->
+        <div class="space-y-6 text-xs md:text-sm text-gray-700">
+          
+          <!-- Step 1 -->
+          <div class="flex items-start space-x-3">
+            <div class="bg-amber-700 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shrink-0">1</div>
+            <div>
+              <h3 class="font-bold text-gray-900">建立 Google 試算表</h3>
+              <p class="text-gray-500 mt-0.5">前往 Google Drive 建立試算表，第一頁命名為 <code class="bg-amber-100 text-amber-800 px-1 rounded">候位點餐紀錄</code>，並在第一列設定標題：</p>
+              <div class="bg-slate-800 text-amber-300 p-3 rounded-lg font-mono text-xs mt-2 overflow-x-auto">
+                ID | 號碼 | 顧客姓名 | 電話 | 人數 | 點餐項目 | 總金額 | 備註 | 狀態 | 時間
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="flex items-start space-x-3">
+            <div class="bg-amber-700 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+            <div class="w-full">
+              <h3 class="font-bold text-gray-900">貼入完整的 Apps Script (Code.gs) 腳本</h3>
+              <p class="text-gray-500 mt-0.5">點選 <b>擴充功能 -> Apps Script</b>，貼入支援雙向讀寫的程式碼：</p>
+              
+              <div class="relative mt-2">
+                <pre class="bg-slate-900 text-slate-100 p-4 rounded-xl font-mono text-xs overflow-x-auto border border-slate-800 leading-relaxed">
+// Google Apps Script (Code.gs)
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("候位點餐紀錄");
+  var data = sheet.getDataRange().getValues();
+  var result = [];
+  
+  for (var i = 1; i < data.length; i++) {
+    result.push({
+      id: data[i][0],
+      ticketNo: data[i][1],
+      name: data[i][2],
+      phone: data[i][3],
+      people: data[i][4],
+      items: data[i][5],
+      totalPrice: Number(data[i][6]),
+      note: data[i][7],
+      status: data[i][8],
+      time: data[i][9]
+    });
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("候位點餐紀錄");
+    var data = JSON.parse(e.postData.contents);
+    
+    sheet.appendRow([
+      data.id || Date.now(),
+      data.ticketNo,
+      data.name,
+      data.phone,
+      data.people,
+      data.items,
+      data.totalPrice,
+      data.note,
+      data.status || 'pending',
+      data.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+    ]);
+    
+    return ContentService.createTextOutput(JSON.stringify({ "result": "success" }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ "result": "error", "message": error.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="flex items-start space-x-3">
+            <div class="bg-amber-700 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs shrink-0">3</div>
+            <div>
+              <h3 class="font-bold text-gray-900">部署並更新前端配置網址</h3>
+              <p class="text-gray-500 mt-0.5">點擊「部署」->「新增部署作業」，種類選擇 <b>Web 應用程式</b>，誰可以存取設為 <b>所有人</b>。複製取得的網址，貼入本網頁原始碼最上方的 <code class="bg-amber-100 text-amber-800 px-1 rounded">GOOGLE_SCRIPT_URL</code> 變數即可！</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- JavaScript 核心邏輯 -->
+  <script>
+    // ⚠️ 設定區：替換為您的 Google Apps Script 部署 URL
+    const GOOGLE_SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+
+    // 系統全域變數
+    let orders = [];
+    let historyMaxCounter = 0; // 歷史最高發號數，防止清空撞號
+    let isApiConnected = false;
+    let pollingTimer = null;
+
+    // 檢查 API 設定狀態
+    function checkApiConfig() {
+      const banner = document.getElementById('api-status-banner');
+      if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL') {
+        isApiConnected = false;
+        banner.className = 'mb-4 p-3 rounded-xl text-xs bg-amber-100 text-amber-900 border border-amber-300 flex justify-between items-center animate-fade-in';
+        banner.innerHTML = `
+          <span><i class="fa-solid fa-triangle-exclamation text-amber-600 mr-1.5"></i> <strong>單機展示模式</strong>：未設定 Google Apps Script 網址，資料僅存於目前瀏覽器記憶體。</span>
+          <button onclick="switchTab('guide')" class="underline font-bold hover:text-amber-700">如何設定？</button>
+        `;
+        banner.classList.remove('hidden');
+      } else {
+        isApiConnected = true;
+        banner.className = 'mb-4 p-3 rounded-xl text-xs bg-green-100 text-green-900 border border-green-300 flex justify-between items-center animate-fade-in';
+        banner.innerHTML = `
+          <span><i class="fa-solid fa-circle-check text-green-600 mr-1.5"></i> <strong>雲端同步運作中</strong>：已串接 Google 試算表，支援跨裝置實時更新。</span>
+        `;
+        banner.classList.remove('hidden');
+      }
+    }
+
+    // 數量加減控制與金額算數
+    function updateItemQty(btn, delta) {
+      const row = btn.closest('.menu-item-row');
+      const qtyEl = row.querySelector('.item-qty');
+      let currentQty = parseInt(qtyEl.innerText) || 0;
+      currentQty = Math.max(0, currentQty + delta);
+      qtyEl.innerText = currentQty;
+
+      if (currentQty > 0) {
+        row.classList.add('border-amber-500', 'bg-amber-50/40');
+      } else {
+        row.classList.remove('border-amber-500', 'bg-amber-50/40');
+      }
+
+      calculateTotalPrice();
+    }
+
+    // 動態算數總金額
+    function calculateTotalPrice() {
+      let totalQty = 0;
+      let totalPrice = 0;
+
+      document.querySelectorAll('.menu-item-row').forEach(row => {
+        const price = parseInt(row.dataset.price) || 0;
+        const qty = parseInt(row.querySelector('.item-qty').innerText) || 0;
+        totalQty += qty;
+        totalPrice += price * qty;
+      });
+
+      document.getElementById('total-qty-display').innerText = totalQty;
+      document.getElementById('total-price-display').innerText = totalPrice.toLocaleString();
+      return { totalQty, totalPrice };
+    }
+
+    // 人數選擇控制
+    function selectPeople(val, btnEl) {
+      document.querySelectorAll('.btn-people').forEach(btn => {
+        btn.className = "btn-people py-2 text-sm border rounded-lg font-medium border-gray-200 text-gray-600";
+      });
+      btnEl.className = "btn-people py-2 text-sm border rounded-lg font-medium border-amber-600 bg-amber-50 text-amber-800";
+      document.getElementById('cust-people').value = val;
+    }
+
+    // 電話號碼驗證
+    function validatePhone(phone) {
+      const phoneRegex = /^09\d{8}$/;
+      return phoneRegex.test(phone.replace(/[- ]/g, ''));
+    }
+
+    // 顧客提交訂單
+    async function handleCustomerSubmit(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('cust-name').value.trim();
+      const phone = document.getElementById('cust-phone').value.trim();
+      const people = document.getElementById('cust-people').value;
+      const note = document.getElementById('cust-note').value.trim();
+      const phoneError = document.getElementById('phone-error');
+
+      if (!validatePhone(phone)) {
+        phoneError.classList.remove('hidden');
+        return;
+      } else {
+        phoneError.classList.add('hidden');
+      }
+
+      // 收集餐點明細
+      const orderItems = [];
+      document.querySelectorAll('.menu-item-row').forEach(row => {
+        const qty = parseInt(row.querySelector('.item-qty').innerText) || 0;
+        if (qty > 0) {
+          orderItems.push(`${row.dataset.name} x${qty}`);
+        }
+      });
+
+      const { totalPrice } = calculateTotalPrice();
+      const itemsStr = orderItems.length > 0 ? orderItems.join(', ') : '僅現場候位（未預點）';
+
+      // 生成續編號號碼
+      historyMaxCounter++;
+      const ticketNo = 'A-' + String(historyMaxCounter).padStart(2, '0');
+
+      const submitBtn = document.getElementById('submit-btn');
+      const submitBtnText = document.getElementById('submit-btn-text');
+      submitBtn.disabled = true;
+      submitBtnText.innerText = '正在傳送預點單...';
+
+      const newOrder = {
+        id: Date.now(),
+        ticketNo: ticketNo,
+        name: name,
+        phone: phone,
+        people: people,
+        items: itemsStr,
+        totalPrice: totalPrice,
+        note: note || '無',
+        status: 'pending',
+        time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // 寫入 API 或本地
+      if (isApiConnected) {
+        try {
+          await fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newOrder)
+          });
+          orders.push(newOrder);
+        } catch (err) {
+          console.error('GAS API 寫入失敗:', err);
+          orders.push(newOrder);
+        }
+      } else {
+        orders.push(newOrder);
+      }
+
+      // 更新顧客取單憑證
+      document.getElementById('my-ticket-card').classList.remove('hidden');
+      document.getElementById('ticket-number').innerText = `# ${ticketNo}`;
+      document.getElementById('ticket-name').innerText = name;
+      document.getElementById('ticket-people').innerText = people;
+      document.getElementById('ticket-items').innerText = itemsStr;
+      document.getElementById('ticket-total-price').innerText = `NT$ ${totalPrice.toLocaleString()}`;
+      document.getElementById('ticket-time').innerText = newOrder.time;
+
+      // 重置表單
+      document.getElementById('orderForm').reset();
+      document.querySelectorAll('.item-qty').forEach(el => el.innerText = '0');
+      document.querySelectorAll('.menu-item-row').forEach(row => row.classList.remove('border-amber-500', 'bg-amber-50/40'));
+      calculateTotalPrice();
+      selectPeople('1人', document.querySelectorAll('.btn-people')[0]);
+
+      submitBtn.disabled = false;
+      submitBtnText.innerText = '確認送出預點單';
+
+      updateQueueBadge();
+      renderManagerView();
+    }
+
+    // 從 GAS 讀取跨裝置訂單
+    async function fetchOrdersFromGAS() {
+      if (!isApiConnected) return;
+      try {
+        const res = await fetch(GOOGLE_SCRIPT_URL);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          orders = data;
+          // 計算歷史最高號碼
+          orders.forEach(o => {
+            if (o.ticketNo && o.ticketNo.startsWith('A-')) {
+              const num = parseInt(o.ticketNo.replace('A-', ''));
+              if (!isNaN(num) && num > historyMaxCounter) {
+                historyMaxCounter = num;
+              }
+            }
+          });
+          renderManagerView();
+          updateQueueBadge();
+          document.getElementById('last-sync-time').innerText = `上次同步：${new Date().toLocaleTimeString()}`;
+        }
+      } catch (err) {
+        console.error('無法讀取 GAS 資料庫:', err);
+      }
+    }
+
+    // 渲染店家管理後端
+    function renderManagerView() {
+      const tbody = document.getElementById('manager-order-rows');
+      const emptyState = document.getElementById('empty-state');
+      tbody.innerHTML = '';
+
+      if (orders.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+
+      let countPending = 0;
+      let countCalled = 0;
+      let countCompleted = 0;
+
+      orders.forEach(order => {
+        if (order.status === 'pending') countPending++;
+        if (order.status === 'called') countCalled++;
+        if (order.status === 'completed') countCompleted++;
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-amber-50/40 transition";
+
+        let statusBadge = '';
+        if (order.status === 'pending') {
+          statusBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-medium">排隊中</span>`;
+        } else if (order.status === 'called') {
+          statusBadge = `<span class="bg-blue-100 text-blue-800 text-xs px-2.5 py-0.5 rounded-full font-medium">叫號中</span>`;
+        } else {
+          statusBadge = `<span class="bg-green-100 text-green-800 text-xs px-2.5 py-0.5 rounded-full font-medium">已完成</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-bold text-amber-800">${order.ticketNo}</td>
+          <td class="py-3 px-4">
+            <div class="font-medium text-gray-800">${order.name}</div>
+            <div class="text-xs text-gray-400">${order.phone}</div>
+          </td>
+          <td class="py-3 px-4 text-xs text-gray-600">${order.people}</td>
+          <td class="py-3 px-4">
+            <div class="text-xs text-gray-800 font-medium">${order.items}</div>
+            ${order.note !== '無' ? `<div class="text-[11px] text-amber-700 italic">備註: ${order.note}</div>` : ''}
+          </td>
+          <td class="py-3 px-4 font-bold text-amber-900">NT$ ${order.totalPrice ? order.totalPrice.toLocaleString() : 0}</td>
+          <td class="py-3 px-4">${statusBadge}</td>
+          <td class="py-3 px-4 text-right space-x-1">
+            ${order.status === 'pending' ? `<button onclick="updateOrderStatus(${order.id}, 'called')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 py-1 rounded transition">叫號</button>` : ''}
+            ${order.status === 'called' ? `<button onclick="updateOrderStatus(${order.id}, 'completed')" class="bg-green-600 hover:bg-green-700 text-white text-xs px-2.5 py-1 rounded transition">完成</button>` : ''}
+            ${order.status === 'completed' ? `<span class="text-xs text-gray-400">已結單</span>` : ''}
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('stat-pending').innerText = countPending;
+      document.getElementById('stat-called').innerText = countCalled;
+      document.getElementById('stat-completed').innerText = countCompleted;
+      document.getElementById('total-orders-count').innerText = orders.length;
+
+      const waitingCount = countPending + countCalled;
+      document.getElementById('waiting-groups-count').innerText = `${waitingCount} 組`;
+
+      const lastCalled = orders.filter(o => o.status === 'called').pop();
+      document.getElementById('current-calling').innerText = lastCalled ? `# ${lastCalled.ticketNo}` : '# --';
+    }
+
+    // 更新單號狀態
+    function updateOrderStatus(id, newStatus) {
+      const target = orders.find(o => o.id === id);
+      if (target) {
+        target.status = newStatus;
+        renderManagerView();
+        updateQueueBadge();
+      }
+    }
+
+    // 更新 Badge 數量
+    function updateQueueBadge() {
+      const pendingCount = orders.filter(o => o.status === 'pending' || o.status === 'called').length;
+      document.getElementById('queue-badge').innerText = pendingCount;
+    }
+
+    // 安全清空資料
+    function clearAllDataSafe() {
+      if (confirm('⚠️ 警告：確定要清空後台所有訂單嗎？\n清空後發號歷史將會保留，防止顧客撞號。')) {
+        orders = [];
+        renderManagerView();
+        updateQueueBadge();
+        document.getElementById('current-calling').innerText = '# --';
+      }
+    }
+
+    // 分頁切換
+    function switchTab(tabName) {
+      document.getElementById('view-customer').classList.add('hidden');
+      document.getElementById('view-manager').classList.add('hidden');
+      document.getElementById('view-guide').classList.add('hidden');
+
+      document.getElementById('tab-customer').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 text-amber-200 hover:text-white";
+      document.getElementById('tab-manager').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 text-amber-200 hover:text-white";
+      document.getElementById('tab-guide').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 text-amber-200 hover:text-white";
+
+      if (tabName === 'customer') {
+        document.getElementById('view-customer').classList.remove('hidden');
+        document.getElementById('tab-customer').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 bg-amber-600 text-white shadow";
+      } else if (tabName === 'manager') {
+        document.getElementById('view-manager').classList.remove('hidden');
+        document.getElementById('tab-manager').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 bg-amber-600 text-white shadow";
+        renderManagerView();
+      } else if (tabName === 'guide') {
+        document.getElementById('view-guide').classList.remove('hidden');
+        document.getElementById('tab-guide').className = "px-3 py-1.5 rounded-md font-medium transition duration-200 bg-amber-600 text-white shadow";
+      }
+    }
+
+    // 初始化與開啟 Polling
+    window.onload = function() {
+      checkApiConfig();
+      renderManagerView();
+      updateQueueBadge();
+
+      // 每 10 秒手動輪詢一次 GAS API
+      if (isApiConnected) {
+        fetchOrdersFromGAS();
+        pollingTimer = setInterval(fetchOrdersFromGAS, 10000);
+      }
+    };
+  </script>
+</body>
+</html>
