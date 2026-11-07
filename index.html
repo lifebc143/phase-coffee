@@ -34,12 +34,12 @@
                 
                 <div class="grid grid-cols-2 gap-3 my-2">
                     <div class="bg-stone-800/80 p-3 rounded-xl border border-amber-500/30">
-                        <div class="text-xs text-amber-300/80 font-medium mb-1">📢 目前叫號</div>
-                        <div class="text-2xl font-extrabold text-amber-400 tracking-wider" id="disp-calling">準備中</div>
+                        <div class="text-xs text-amber-300/80 font-medium mb-1">📢 目前叫號 (顯示最後3個)</div>
+                        <div class="text-lg font-extrabold text-amber-400 tracking-wider truncate" id="disp-calling">準備中</div>
                     </div>
                     <div class="bg-stone-800/80 p-3 rounded-xl border border-stone-700">
-                        <div class="text-xs text-stone-400 font-medium mb-1">✅ 最新可取餐</div>
-                        <div class="text-base font-bold text-emerald-400 truncate" id="disp-completed">無</div>
+                        <div class="text-xs text-stone-400 font-medium mb-1">✅ 最新可取餐 (顯示最後5個)</div>
+                        <div class="text-sm font-bold text-emerald-400 truncate" id="disp-completed">無</div>
                     </div>
                 </div>
                 <p class="text-[11px] text-stone-400 mt-2">💡 請留意現場叫號，若過號請主動告知現場工作人員。</p>
@@ -305,7 +305,7 @@
                     globalOrders = data.orders;
                     renderAdminList();
                 } else {
-                    listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">目前尚無預訂訂單</div>';
+                    listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">目前尚無預訂單</div>';
                 }
             } catch (err) {
                 listContainer.innerHTML = '<div class="text-center py-8 text-red-400">無法載入試算表資料</div>';
@@ -320,8 +320,9 @@
                     const callingOrders = data.orders.filter(o => String(o.status || '').trim() === '叫號中').map(o => o.id);
                     const completedOrders = data.orders.filter(o => String(o.status || '').trim() === '已完成').map(o => o.id);
 
-                    document.getElementById('disp-calling').innerText = callingOrders.length > 0 ? callingOrders.join(', ') : '準備中';
-                    document.getElementById('disp-completed').innerText = completedOrders.length > 0 ? completedOrders.slice(-3).join(', ') : '無';
+                    // 叫號顯示最後 3 個，完成顯示最後 5 個
+                    document.getElementById('disp-calling').innerText = callingOrders.length > 0 ? callingOrders.slice(-3).join(', ') : '準備中';
+                    document.getElementById('disp-completed').innerText = completedOrders.length > 0 ? completedOrders.slice(-5).join(', ') : '無';
                 }
             } catch(e) {}
         }
@@ -340,14 +341,22 @@
             listContainer.innerHTML = globalOrders.slice().reverse().map((o, index) => {
                 const status = String(o.status || '等待中').trim();
                 let borderClass = 'border-stone-200';
-                let badgeHtml = '';
+                let actionButtons = '';
 
                 if (status === '叫號中') {
                     borderClass = 'border-amber-500 ring-2 ring-amber-400/20';
-                    badgeHtml = '<span class="text-xs bg-amber-500 text-white px-2.5 py-1 rounded-md font-bold">📢 已叫號</span>';
+                    actionButtons = `
+                        <span class="text-xs bg-amber-500 text-white px-2 py-1 rounded-md font-bold mr-1">📢 已叫號</span>
+                        <button onclick="updateStatusOnServer(${globalOrders.length - 1 - index}, '已完成')" class="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition">✅ 標記完成</button>
+                    `;
                 } else if (status === '已完成') {
                     borderClass = 'border-emerald-300 opacity-60';
-                    badgeHtml = '<span class="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded-md font-bold">✅ 已完成</span>';
+                    actionButtons = '<span class="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded-md font-bold">✅ 已完成</span>';
+                } else {
+                    actionButtons = `
+                        <button onclick="updateStatusOnServer(${globalOrders.length - 1 - index}, '叫號中')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg font-bold transition">📢 叫號</button>
+                        <button onclick="updateStatusOnServer(${globalOrders.length - 1 - index}, '已完成')" class="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition">✅ 完成</button>
+                    `;
                 }
 
                 const originalIndex = globalOrders.length - 1 - index;
@@ -361,11 +370,8 @@
                         <div class="text-xs text-stone-700 font-medium bg-stone-50 p-2.5 rounded-lg mb-3">${o.items}</div>
                         <div class="flex justify-between items-center text-xs font-bold border-t border-stone-100 pt-2.5">
                             <span class="text-stone-600">電話: ${o.phone} | <span class="text-stone-900 font-extrabold">NT$ ${o.total}</span></span>
-                            <div class="space-x-1.5" id="btn-group-${index}">
-                                ${badgeHtml || `
-                                    <button onclick="updateStatusOnServer(${originalIndex}, '叫號中')" class="bg-amber-100 text-amber-800 hover:bg-amber-200 px-3 py-1.5 rounded-lg font-bold transition">📢 叫號</button>
-                                    <button onclick="updateStatusOnServer(${originalIndex}, '已完成')" class="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 px-3 py-1.5 rounded-lg font-bold transition">✅ 完成</button>
-                                `}
+                            <div class="space-x-1.5">
+                                ${actionButtons}
                             </div>
                         </div>
                     </div>
@@ -381,13 +387,13 @@
             if (!globalOrders[orderIndex]) return;
             
             globalOrders[orderIndex].status = newStatus;
-            renderAdminList(); // 畫面立刻變色，統計數字立刻加算！
+            renderAdminList();
 
             const targetId = globalOrders[orderIndex].id;
             const updateUrl = `${GOOGLE_SCRIPT_URL}?action=updateStatus&rowId=${encodeURIComponent(targetId)}&status=${encodeURIComponent(newStatus)}`;
 
             try {
-                await fetch(updateUrl, { mode: 'no-cors' }); // 絕對成功寫入 Google 試算表 H 欄
+                await fetch(updateUrl, { mode: 'no-cors' });
             } catch(e) {
                 console.error("狀態同步失敗", e);
             }
