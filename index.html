@@ -60,9 +60,10 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-stone-600 mb-1">用餐/候位人數</label>
-                            <select id="cust-people" class="w-full border border-stone-300 rounded-xl p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            <select id="cust-people" class="w-full border border-stone-300 rounded-xl p-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium">
+                                <option value="外帶" selected>🥤 外帶 Takeout</option>
                                 <option value="1">1 人</option>
-                                <option value="2" selected>2 人</option>
+                                <option value="2">2 人</option>
                                 <option value="3">3 人</option>
                                 <option value="4">4 人以上</option>
                             </select>
@@ -315,10 +316,8 @@
                 const res = await fetch(GOOGLE_SCRIPT_URL);
                 const data = await res.json();
                 if (data.status === 'success' && data.orders.length > 0) {
-                    // 「目前叫號」：顯示叫號中的單號（最後 5 個）
                     const callingOrders = data.orders.filter(o => String(o.status || '').trim() === '叫號中').map(o => o.id);
                     
-                    // 「最新可取餐」：這裡我們讓它顯示「叫號中」的單號，代表做好正在等待客人來拿的餐點！
                     document.getElementById('disp-calling').innerText = callingOrders.length > 0 ? callingOrders.slice(-3).join(', ') : '準備中';
                     document.getElementById('disp-completed').innerText = callingOrders.length > 0 ? callingOrders.slice(-5).join(', ') : '無';
                 }
@@ -340,6 +339,7 @@
                 const status = String(o.status || '等待中').trim();
                 let borderClass = 'border-stone-200';
                 let actionButtons = '';
+                const peopleDisplay = o.people === '外帶' ? '🥤 外帶' : `${o.people}位`;
 
                 if (status.includes('叫號')) {
                     borderClass = 'border-amber-500 ring-2 ring-amber-400/20';
@@ -362,7 +362,7 @@
                 return `
                     <div class="bg-white p-4 rounded-xl shadow-sm border ${borderClass} transition">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="font-black text-lg text-stone-900">${o.id} - ${o.name} (${o.people}位)</span>
+                            <span class="font-black text-lg text-stone-900">${o.id} - ${o.name} (${peopleDisplay})</span>
                             <span class="text-xs bg-stone-100 text-stone-500 px-2 py-1 rounded">${o.time}</span>
                         </div>
                         <div class="text-xs text-stone-700 font-medium bg-stone-50 p-2.5 rounded-lg mb-3">${o.items}</div>
