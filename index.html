@@ -3,141 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phase Coffee - 市集預點與候位系統</title>
-    <!-- Tailwind CSS CDN -->
+    <title>Phase Coffee - 現場預點專用</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-stone-100 text-stone-800 font-sans min-h-screen pb-20">
 
-    <!-- Header / Navbar -->
     <header class="bg-stone-900 text-stone-100 py-6 px-4 shadow-md sticky top-0 z-50">
-        <div class="max-w-xl mx-auto flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold tracking-wider">PHASE COFFEE</h1>
-                <p class="text-xs text-stone-400">市集現場預點 & 候位系統</p>
-            </div>
-            <!-- 切換檢視按鈕 -->
-            <button id="toggle-view-btn" onclick="toggleView()" class="text-xs bg-stone-700 hover:bg-stone-600 px-3 py-1.5 rounded transition">
-                切換至店家後台
-            </button>
+        <div class="max-w-xl mx-auto text-center">
+            <h1 class="text-2xl font-bold tracking-wider">PHASE COFFEE</h1>
+            <p class="text-xs text-stone-400">市集現場自助預點系統</p>
         </div>
     </header>
 
-    <main class="max-w-xl mx-auto p-4">
-
-        <!-- ================= 顧客端介面 ================= -->
-        <section id="customer-view" class="space-block">
-            <!-- 候位與訂購表單 -->
-            <div class="bg-white rounded-xl shadow-sm p-5 mb-6 border border-stone-200">
-                <h2 class="text-lg font-bold mb-4 pb-2 border-b border-stone-100 text-stone-900">1. 基本候位資料</h2>
-                <div class="space-y-4">
+    <main class="max-w-xl mx-auto p-4 space-y-6">
+        <!-- 1. 基本資料與備註 -->
+        <div class="bg-white rounded-xl shadow-sm p-5 border border-stone-200">
+            <h2 class="text-lg font-bold mb-4 pb-2 border-b border-stone-100 text-stone-900">1. 基本資料與備註</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-stone-600 mb-1">姓名 / 暱稱 *</label>
+                    <input type="text" id="cust-name" placeholder="例如：林先生" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-stone-600 mb-1">姓名 / 暱稱 *</label>
-                        <input type="text" id="cust-name" placeholder="例如：林先生" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500">
+                        <label class="block text-sm font-medium text-stone-600 mb-1">電話號碼 *</label>
+                        <input type="tel" id="cust-phone" placeholder="0912345678" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500">
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-stone-600 mb-1">電話號碼 *</label>
-                            <input type="tel" id="cust-phone" placeholder="0912345678" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-stone-600 mb-1">用餐/候位人數</label>
-                            <select id="cust-people" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500 bg-white">
-                                <option value="1">1 人</option>
-                                <option value="2" selected>2 人</option>
-                                <option value="3">3 人</option>
-                                <option value="4">4 人以上</option>
-                            </select>
-                        </div>
+                    <div>
+                        <label class="block text-sm font-medium text-stone-600 mb-1">用餐/候位人數</label>
+                        <select id="cust-people" class="w-full border border-stone-300 rounded-lg p-2.5 bg-white">
+                            <option value="1">1 人</option>
+                            <option value="2" selected>2 人</option>
+                            <option value="3">3 人</option>
+                            <option value="4">4 人以上</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-stone-600 mb-1">特殊調配 / 備註（例如：冰塊少一點、特調改燕麥奶等）</label>
+                    <input type="text" id="cust-note" placeholder="選填：有無特殊需求" class="w-full border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-stone-500">
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 菜單點餐 -->
+        <div class="bg-white rounded-xl shadow-sm p-5 border border-stone-200">
+            <h2 class="text-lg font-bold mb-4 pb-2 border-b border-stone-100 text-stone-900">2. 選擇餐點</h2>
+            <div class="space-y-4" id="menu-container">
+                <div class="flex justify-between items-center p-3 rounded-lg border border-stone-100">
+                    <div>
+                        <div class="font-bold text-stone-800">單品手沖咖啡</div>
+                        <div class="text-xs text-stone-500">NT$ 150 / 杯</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQty('item-1', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
+                        <span id="qty-item-1" class="w-6 text-center font-bold">0</span>
+                        <button onclick="updateQty('item-1', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white font-bold">+</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center p-3 rounded-lg border border-stone-100">
+                    <div>
+                        <div class="font-bold text-stone-800">義式拿鐵 / 美式</div>
+                        <div class="text-xs text-stone-500">NT$ 130 / 杯</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQty('item-2', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
+                        <span id="qty-item-2" class="w-6 text-center font-bold">0</span>
+                        <button onclick="updateQty('item-2', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white font-bold">+</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center p-3 rounded-lg border border-stone-100">
+                    <div>
+                        <div class="font-bold text-stone-800">燕麥奶冷萃</div>
+                        <div class="text-xs text-stone-500">NT$ 140 / 杯</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQty('item-3', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
+                        <span id="qty-item-3" class="w-6 text-center font-bold">0</span>
+                        <button onclick="updateQty('item-3', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white font-bold">+</button>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center p-3 rounded-lg border border-stone-100">
+                    <div>
+                        <div class="font-bold text-stone-800">焦糖巴斯克蛋糕</div>
+                        <div class="text-xs text-stone-500">NT$ 120 / 塊</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQty('item-4', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
+                        <span id="qty-item-4" class="w-6 text-center font-bold">0</span>
+                        <button onclick="updateQty('item-4', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white font-bold">+</button>
                     </div>
                 </div>
             </div>
 
-            <!-- 菜單點餐 -->
-            <div class="bg-white rounded-xl shadow-sm p-5 mb-6 border border-stone-200">
-                <h2 class="text-lg font-bold mb-4 pb-2 border-b border-stone-100 text-stone-900">2. 現場預訂餐點</h2>
-                
-                <div class="space-y-4" id="menu-container">
-                    <div class="flex justify-between items-center p-3 rounded-lg hover:bg-stone-50 border border-stone-100">
-                        <div>
-                            <div class="font-bold text-stone-800">單品手沖咖啡</div>
-                            <div class="text-xs text-stone-500">NT$ 150 / 杯</div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="updateQty('item-1', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
-                            <span id="qty-item-1" class="w-6 text-center font-bold">0</span>
-                            <button onclick="updateQty('item-1', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white hover:bg-stone-700 font-bold">+</button>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center p-3 rounded-lg hover:bg-stone-50 border border-stone-100">
-                        <div>
-                            <div class="font-bold text-stone-800">義式拿鐵 / 美式</div>
-                            <div class="text-xs text-stone-500">NT$ 130 / 杯</div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="updateQty('item-2', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
-                            <span id="qty-item-2" class="w-6 text-center font-bold">0</span>
-                            <button onclick="updateQty('item-2', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white hover:bg-stone-700 font-bold">+</button>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center p-3 rounded-lg hover:bg-stone-50 border border-stone-100">
-                        <div>
-                            <div class="font-bold text-stone-800">燕麥奶冷萃</div>
-                            <div class="text-xs text-stone-500">NT$ 140 / 杯</div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="updateQty('item-3', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
-                            <span id="qty-item-3" class="w-6 text-center font-bold">0</span>
-                            <button onclick="updateQty('item-3', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white hover:bg-stone-700 font-bold">+</button>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between items-center p-3 rounded-lg hover:bg-stone-50 border border-stone-100">
-                        <div>
-                            <div class="font-bold text-stone-800">焦糖巴斯克蛋糕</div>
-                            <div class="text-xs text-stone-500">NT$ 120 / 塊</div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <button onclick="updateQty('item-4', -1)" class="w-8 h-8 rounded-full bg-stone-200 hover:bg-stone-300 font-bold">-</button>
-                            <span id="qty-item-4" class="w-6 text-center font-bold">0</span>
-                            <button onclick="updateQty('item-4', 1)" class="w-8 h-8 rounded-full bg-stone-800 text-white hover:bg-stone-700 font-bold">+</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-6 pt-4 border-t border-stone-200 flex justify-between items-center font-bold">
-                    <span>預估總金額：</span>
-                    <span class="text-xl text-stone-900" id="total-price">NT$ 0</span>
-                </div>
+            <div class="mt-6 pt-4 border-t border-stone-200 flex justify-between items-center font-bold">
+                <span>預估總金額：</span>
+                <span class="text-xl text-stone-900" id="total-price">NT$ 0</span>
             </div>
+        </div>
 
-            <button id="submit-btn" onclick="submitOrder()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 flex justify-center items-center">
-                <span>確認送出預訂單</span>
-            </button>
-        </section>
-
-        <!-- ================= 店家後台介面 ================= -->
-        <section id="admin-view" class="hidden space-block">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold text-stone-900">即時候位與訂單清單</h2>
-                <button onclick="fetchOrdersFromSheet()" class="text-xs bg-stone-200 hover:bg-stone-300 px-3 py-1.5 rounded text-stone-700">
-                    🔄 重新同步
-                </button>
-            </div>
-
-            <div id="order-list" class="space-y-4">
-                <div class="text-center py-8 text-stone-400">讀取資料中...</div>
-            </div>
-        </section>
-
+        <button id="submit-btn" onclick="submitOrder()" class="w-full bg-stone-900 hover:bg-stone-800 text-white font-bold py-4 rounded-xl shadow-lg transition">
+            確認送出預訂單
+        </button>
     </main>
 
-    <!-- JavaScript 邏輯 -->
     <script>
         const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyEXPhlLXfyQpaxeB-1ADSdWemihBx6FNb6bYkwi-oE-JoA74lHQoAxvGOgS9cLSowA/exec";
-
         const itemsData = {
             'item-1': { name: '單品手沖咖啡', price: 150, qty: 0 },
             'item-2': { name: '義式拿鐵 / 美式', price: 130, qty: 0 },
@@ -147,10 +121,8 @@
 
         function updateQty(itemId, delta) {
             const item = itemsData[itemId];
-            if (!item) return;
             item.qty = Math.max(0, item.qty + delta);
             document.getElementById(`qty-${itemId}`).innerText = item.qty;
-            
             let total = 0;
             Object.values(itemsData).forEach(i => total += i.price * i.qty);
             document.getElementById('total-price').innerText = `NT$ ${total}`;
@@ -160,21 +132,16 @@
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
             const people = document.getElementById('cust-people').value;
+            const note = document.getElementById('cust-note').value.trim();
 
-            if (!name || !phone) {
-                alert('請填寫姓名與電話！');
-                return;
-            }
+            if (!name || !phone) { alert('請填寫姓名與電話！'); return; }
 
             const itemsSummary = Object.values(itemsData)
                 .filter(i => i.qty > 0)
                 .map(i => `${i.name} x${i.qty}`)
                 .join(', ');
 
-            if (!itemsSummary) {
-                alert('請至少選擇一項餐點！');
-                return;
-            }
+            if (!itemsSummary) { alert('請至少選擇一項餐點！'); return; }
 
             let total = 0;
             Object.values(itemsData).forEach(i => total += i.price * i.qty);
@@ -187,28 +154,28 @@
             const now = new Date();
             const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
+            // 組合發送到後端的資料 (包含備註欄位)
             const orderPayload = {
                 id: orderId,
                 time: timeStr,
                 name: name,
                 phone: phone,
                 people: people,
-                items: itemsSummary,
+                items: itemsSummary + (note ? ` [備註: ${note}]` : ''),
                 total: total
             };
 
             try {
-                if (GOOGLE_SCRIPT_URL) {
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(orderPayload)
-                    });
-                }
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderPayload)
+                });
                 alert(`預訂成功！您的單號為：${orderId}\n請留意現場叫號！`);
                 document.getElementById('cust-name').value = '';
                 document.getElementById('cust-phone').value = '';
+                document.getElementById('cust-note').value = '';
                 Object.keys(itemsData).forEach(key => {
                     itemsData[key].qty = 0;
                     document.getElementById(`qty-${key}`).innerText = '0';
@@ -216,78 +183,9 @@
                 document.getElementById('total-price').innerText = 'NT$ 0';
             } catch (err) {
                 alert('傳送失敗，請稍後再試！');
-                console.error(err);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = '確認送出預訂單';
-            }
-        }
-
-        function toggleView() {
-            const custView = document.getElementById('customer-view');
-            const adminView = document.getElementById('admin-view');
-            const btn = document.getElementById('toggle-view-btn');
-
-            if (custView.classList.contains('hidden')) {
-                custView.classList.remove('hidden');
-                adminView.classList.add('hidden');
-                btn.innerText = '切換至店家後台';
-            } else {
-                custView.classList.add('hidden');
-                adminView.classList.remove('hidden');
-                btn.innerText = '切換至顧客預訂';
-                fetchOrdersFromSheet();
-            }
-        }
-
-        async function fetchOrdersFromSheet() {
-            const listContainer = document.getElementById('order-list');
-            listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">更新訂單中...</div>';
-
-            if (!GOOGLE_SCRIPT_URL) {
-                listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">尚未設定試算表 API 網址</div>';
-                return;
-            }
-
-            try {
-                const res = await fetch(GOOGLE_SCRIPT_URL);
-                const data = await res.json();
-
-                if (data.status === 'success' && data.orders.length > 0) {
-                    listContainer.innerHTML = data.orders.reverse().map((o, index) => `
-                        <div class="bg-white p-4 rounded-xl shadow-sm border border-stone-200 mb-3" id="order-card-${index}">
-                            <div class="flex justify-between items-center mb-2">
-                                <span class="font-bold text-lg text-stone-900">${o.id} - ${o.name} (${o.people}位)</span>
-                                <span class="text-xs bg-stone-100 text-stone-600 px-2 py-1 rounded">${o.time}</span>
-                            </div>
-                            <div class="text-sm text-stone-600 mb-3">${o.items}</div>
-                            <div class="flex justify-between items-center text-sm font-bold border-t border-stone-100 pt-3">
-                                <span class="text-stone-700">電話: ${o.phone} | <span class="text-stone-900">NT$ ${o.total}</span></span>
-                                <div class="space-x-2">
-                                    <button onclick="updateOrderStatus(this, '叫號中')" class="text-xs bg-amber-100 text-amber-700 hover:bg-amber-200 px-3 py-1.5 rounded font-medium transition">📢 叫號</button>
-                                    <button onclick="updateOrderStatus(this, '已完成')" class="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded font-medium transition">✅ 完成</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">目前尚無預訂訂單</div>';
-                }
-            } catch (err) {
-                listContainer.innerHTML = '<div class="text-center py-8 text-red-400">無法載入試算表資料</div>';
-            }
-        }
-
-        // 後台按鈕互動特效
-        function updateOrderStatus(btn, statusText) {
-            const card = btn.closest('div.bg-white');
-            const buttonsContainer = btn.parentElement;
-            if (statusText === '叫號中') {
-                card.style.borderColor = '#d97706'; // 琥珀色邊框
-                buttonsContainer.innerHTML = `<span class="text-xs bg-amber-500 text-white px-3 py-1 rounded font-bold">📢 已叫號</span>`;
-            } else {
-                card.style.opacity = '0.5';
-                buttonsContainer.innerHTML = `<span class="text-xs bg-emerald-600 text-white px-3 py-1 rounded font-bold">✅ 已完成</span>`;
             }
         }
     </script>
