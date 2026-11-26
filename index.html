@@ -180,9 +180,9 @@
             <div class="flex justify-between items-center pt-2">
                 <h2 class="text-lg font-bold text-stone-900">即時訂單動態清單</h2>
                 <div class="flex gap-2">
-                    <button id="sheet-view-btn" onclick="toggleSheetView()" class="text-xs bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 rounded-lg font-bold">
-                        📋 試算表內容
-                    </button>
+                    <a href="https://docs.google.com/spreadsheets/d/1t1FuneUpTtO0BroXBcYY00AfzRBovHV5BkD6SQm03CM/edit?hl=zh-tw&amp;pli=1&amp;gid=0#gid=0" target="_blank" rel="noopener" class="text-xs bg-amber-600 text-white hover:bg-amber-700 px-3 py-1.5 rounded-lg font-bold">
+                        📋 開啟試算表
+                    </a>
                     <button onclick="fetchOrdersFromSheet()" class="text-xs bg-stone-800 text-white hover:bg-stone-700 px-3 py-1.5 rounded-lg font-bold">
                         🔄 刷新訂單
                     </button>
@@ -191,31 +191,6 @@
 
             <div id="order-list" class="space-y-3">
                 <div class="text-center py-8 text-stone-400">讀取資料中...</div>
-            </div>
-
-            <div id="sheet-table-wrap" class="hidden">
-                <div class="flex justify-between items-center text-[11px] text-stone-400 mb-2">
-                    <span>📋 試算表「候位點餐紀錄」即時內容（最新在最上面）</span>
-                    <span id="sheet-updated"></span>
-                </div>
-                <div class="overflow-x-auto bg-white rounded-xl border border-stone-200 shadow-sm">
-                    <table class="w-full text-xs min-w-[680px]">
-                        <thead>
-                            <tr class="bg-stone-900 text-amber-100 text-left">
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">號碼</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">時間</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">姓名</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">電話</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">人數</th>
-                                <th class="px-2.5 py-2 font-bold">點餐項目</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">總金額</th>
-                                <th class="px-2.5 py-2 font-bold whitespace-nowrap">狀態</th>
-                            </tr>
-                        </thead>
-                        <tbody id="sheet-table-rows"></tbody>
-                    </table>
-                </div>
-                <p class="text-[11px] text-stone-400 mt-2">💡 這個表格就是試算表的內容，後台每 1 分鐘自動更新，也可以按「刷新訂單」馬上更新。</p>
             </div>
         </section>
 
@@ -334,9 +309,7 @@
                     globalOrders = data.orders;
                     renderAdminList();
                 } else {
-                    globalOrders = [];
                     listContainer.innerHTML = '<div class="text-center py-8 text-stone-400">目前尚無預訂單</div>';
-                    renderSheetTable();
                 }
             } catch (err) {
                 listContainer.innerHTML = '<div class="text-center py-8 text-red-400">無法載入試算表資料</div>';
@@ -411,57 +384,6 @@
             document.getElementById('stat-pending').innerText = pending;
             document.getElementById('stat-calling').innerText = calling;
             document.getElementById('stat-completed').innerText = completed;
-            renderSheetTable();
-        }
-
-        function esc(s) {
-            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-            });
-        }
-
-        function statusPill(status) {
-            const st = String(status || '等待中').trim();
-            if (st.includes('叫號')) return '<span class="inline-block bg-amber-500 text-white px-2 py-0.5 rounded-md font-bold">📢 ' + esc(st) + '</span>';
-            if (st.includes('完成')) return '<span class="inline-block bg-emerald-600 text-white px-2 py-0.5 rounded-md font-bold">✅ ' + esc(st) + '</span>';
-            return '<span class="inline-block bg-stone-200 text-stone-700 px-2 py-0.5 rounded-md font-bold">' + esc(st) + '</span>';
-        }
-
-        // 試算表內容檢視：把同一份試算表資料畫成表格（最新在最上面）
-        function renderSheetTable() {
-            const tbody = document.getElementById('sheet-table-rows');
-            if (!tbody) return;
-            if (!globalOrders || globalOrders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-stone-400">目前尚無預訂單</td></tr>';
-            } else {
-                tbody.innerHTML = globalOrders.slice().reverse().map(function (o) {
-                    const peopleDisplay = o.people === '外帶' ? '🥤 外帶' : esc(o.people) + '位';
-                    return '<tr class="border-t border-stone-100">'
-                        + '<td class="px-2.5 py-2 font-bold text-stone-900 whitespace-nowrap">' + esc(o.id) + '</td>'
-                        + '<td class="px-2.5 py-2 text-stone-500 whitespace-nowrap">' + esc(o.time) + '</td>'
-                        + '<td class="px-2.5 py-2 font-bold text-stone-800 whitespace-nowrap">' + esc(o.name) + '</td>'
-                        + '<td class="px-2.5 py-2 whitespace-nowrap">' + esc(o.phone) + '</td>'
-                        + '<td class="px-2.5 py-2 whitespace-nowrap">' + peopleDisplay + '</td>'
-                        + '<td class="px-2.5 py-2 text-stone-700">' + esc(o.items) + '</td>'
-                        + '<td class="px-2.5 py-2 font-bold text-stone-900 whitespace-nowrap">NT$ ' + esc(o.total) + '</td>'
-                        + '<td class="px-2.5 py-2 whitespace-nowrap">' + statusPill(o.status) + '</td>'
-                        + '</tr>';
-                }).join('');
-            }
-            const updatedEl = document.getElementById('sheet-updated');
-            if (updatedEl) updatedEl.innerText = '最後更新 ' + new Date().toLocaleTimeString('zh-TW', { hour12: false });
-        }
-
-        // 切換訂單卡片／試算表內容兩種檢視
-        function toggleSheetView() {
-            const listEl = document.getElementById('order-list');
-            const tableWrap = document.getElementById('sheet-table-wrap');
-            const btn = document.getElementById('sheet-view-btn');
-            const showTable = tableWrap.classList.contains('hidden');
-            tableWrap.classList.toggle('hidden', !showTable);
-            listEl.classList.toggle('hidden', showTable);
-            btn.innerText = showTable ? '🗂️ 訂單卡片' : '📋 試算表內容';
-            if (showTable) renderSheetTable();
         }
 
         async function updateStatusOnServer(orderIndex, newStatus) {
